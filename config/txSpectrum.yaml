@@ -1,0 +1,203 @@
+# txhybid_config.yaml
+
+#input_file: "/home/zane/txhybrid/data/mdtx.nocuts.refined.root"
+input_file: "/mnt/ta_storage_3/hybrid/mc/brtax4/brtax4.hybrid.qgsii03.proton.root"
+tree_name: "taTree"
+output_dir: "/home/zane/txhybrid/spectrum/results/noCuts/brtax4"
+library_file: "/home/zane/software/taAnalysis/src/library/txHybrid_composition.py"
+detector_config: "/home/zane/software/taAnalysis/src/config/detectors/tax4_south_config.yaml"
+custom_analysis: ~
+
+# Detector settings.  Do not change this section.
+# It is loaded automatically from the detector_config file.
+detector: null
+
+# The following setting is required for FD/Hybrid only. [0-15]
+profile_fit_index: 7
+
+# New columns to define
+new_columns:
+  - name: "Xmax_true"
+    expression: "mc04.xmax"
+
+  - name: "Energy_true"
+    expression: "mc04.energy"
+
+  - name: "LogEnergy_true"
+    expression: "TMath::Log10(mc04.energy)"
+
+  - name: "Zenith_true"
+    expression: "mc04.theta"
+
+  - name: "Psi_true"
+    expression: "mc04.psi"
+
+  - name: "Rp_true"
+    expression: "mc04.rp"
+
+
+
+  - name: "Xmax"  # Name of the new column.
+    expression: "prfc.xm[profile_fit_index]"  # Expression to calculate the values of the new column.
+
+  - name: "Xlow"
+    expression: "prfc.dep[profile_fit_index][0]"
+
+  - name: "Xhigh"
+    expression: "prfc.dep[profile_fit_index][prfc.nbin[profile_fit_index]-1]"
+##
+  - name: "LogEnergy"
+    expression: "18. + TMath::Log10(prfc.eng[profile_fit_index])"
+#
+  - name: "Energy"
+    expression: "prfc.eng[profile_fit_index]"
+#
+  - name: "Zenith"
+    expression: "TMath::RadToDeg()*hctim.mthe[profile_fit_index]"
+
+  - name: "Psi"
+    expression: "TMath::RadToDeg()*hctim.mpsi[profile_fit_index]"
+
+  - name: "Rp"
+    expression: "hctim.mrp[profile_fit_index]"
+
+  - name: "PulseArea"
+    expression: "tlfptn.pulsa"
+#
+  - name: "TriggeredSDCount"
+    expression: "tlfptn.nhits"
+
+#  - name: "GeometryFitStatus"
+#    expression: "hctim.failmode[profile_fit_index]"
+#
+#  - name: "ProfileFitStatus"
+#    expression: "prfc.failmode[profile_fit_index]"
+
+  - name: "GeometryFitQuality"
+    expression: "hctim.mchi2[profile_fit_index] / (prfc.nbin[profile_fit_index] - 2)"
+
+  - name: "ProfileFitQuality"
+    expression: "prfc.chi2[profile_fit_index] / prfc.ndf[profile_fit_index]"
+
+  - name: "HitSDsXXYY"
+    expression: "tlfptn.xxyy"
+
+  - name: "HitSDsCLF"
+    expression: "tlfptn.xyzclf"
+
+  - name: "Talex00HitSDsXXYY"
+    expression: "talex00.xxyy"
+
+  - name: "HybridCoreX_FD"
+    expression: "hctim.mcore[profile_fit_index][0]"
+
+  - name: "HybridCoreY_FD"
+    expression: "hctim.mcore[profile_fit_index][1]"
+
+  - name: "L2TriggerCode"
+    expression: "talex00.level2_trig_code"
+
+  - name: "Date"
+    expression: "talex00.yymmdd"
+
+  - name: "hhmmss"
+    expression: "talex00.hhmmss"
+
+  - name: "Microseconds"
+    expression: "talex00.usec"
+
+# Event Selection Criteria
+cuts:
+  - "LogEnergy >= 18.5"
+#  - "ProfileFitQuality <= 25."
+#  - "GeometryFitQuality <= 15."
+#  - "CoreProximity <=  3.5"
+#  - "BorderDistance > 0."
+
+# Histogram parameters
+hist_params:
+
+
+# Specify the new columns to be defined via the user-defined functions.
+# The callable functions must be defined in the my_analysis file.
+# If callable is set to null:
+    # One param given: Not yet defined.
+    # Two params given: The new column is defined by a slice: value1[value2].
+    # Three or more params given: Not yet defined.
+user_functions:
+  - new_column: "PulseAreaMean"
+    callable: "calculateMeanOfVectors"
+    args:
+      - value: "PulseArea"
+
+  - new_column: "HotSDSignal"
+    callable: "findMaxInRVec"
+    args:
+      - value: "PulseAreaMean"
+
+  - new_column: "HotSDIndex"
+    callable: "findMaxIndex"
+    args:
+      - value: "PulseAreaMean"
+
+  - new_column: "FD_CLF_X"
+    callable: ~
+    args:
+      - value: "fd_clf_x"
+
+  - new_column: "FD_CLF_Y"
+    callable: ~
+    args:
+      - value: "fd_clf_y"
+
+  - new_column: "HotSD_CLF"
+    callable: ~
+    args:
+      - value: "HitSDsCLF"
+      - value: "HotSDIndex"
+
+  - new_column: "HotSD_CLF_X"
+    callable: ~
+    args:
+      - value: "HotSD_CLF"
+      - value: "0"
+
+  - new_column: "HotSD_CLF_Y"
+    callable: ~
+    args:
+      - value: "HotSD_CLF"
+      - value: "1"
+
+  - new_column: "HybridCoreX"
+    callable: ~
+    args:
+      - value: "HybridCoreX_FD + FD_CLF_X"
+
+  - new_column: "HybridCoreY"
+    callable: ~
+    args:
+      - value: "HybridCoreY_FD + FD_CLF_Y"
+
+  - new_column: "HotSDxxyy"
+    callable: ~
+    args:
+      - value: "HitSDsXXYY"
+      - value: "HotSDIndex"
+#
+  - new_column: "CoreProximity"
+    callable: "coreProximity"
+    args:
+      - value: "HybridCoreX"
+      - value: "HybridCoreY"
+      - value: "HotSD_CLF_X"
+      - value: "HotSD_CLF_Y"
+
+  - new_column: "Weights"
+    callable: "calculateWeightForScalar"
+    args:
+      - value: "Energy_true"
+
+#  - new_column: "WeightedEnergy"
+#    callable: ~
+#    args:
+#      - value: "EnergyWeights * LogEnergy"
