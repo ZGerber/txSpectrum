@@ -28,5 +28,6 @@ def prepare_data(dt, mc, cuts, use_border, use_geom):
 
     logger.info("Reweighting MC energies...")
     weights = reweight_true_energy(mc_cut.Energy_true)
+    weights_full = reweight_true_energy(mc.Energy_true)
 
-    return dt_cut, mc_cut, data_counts, mc_counts, weights
+    return dt_cut, mc_cut, data_counts, mc_counts, weights, weights_full

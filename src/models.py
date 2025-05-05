@@ -26,3 +26,38 @@ def broken_powerlaw_2break(x, A1, m1, m2, m3, logE1, logE2):
     out[mask3] = A3 * 10 ** (m3 * (x[mask3] - logE2))
 
     return out
+
+
+def synthetic_energy_distribution(logE_min=17.0,
+                                  logE_max=21.0,
+                                  gamma=2.0,
+                                  total_events=int(1e7),
+                                  n_bins=1000,
+                                  seed=None):
+
+    rng = np.random.default_rng(seed)
+
+    bin_edges = np.linspace(logE_min, logE_max, n_bins + 1)
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+    E_low = 10 ** bin_edges[:-1]
+    E_high = 10 ** bin_edges[1:]
+
+    # Compute integral of E^-gamma over each bin
+    if gamma == 1.0:
+        bin_integrals = np.log(E_high / E_low)
+    else:
+        bin_integrals = (E_high ** (1 - gamma) - E_low ** (1 - gamma)) / (1 - gamma)
+
+    # Normalize to total_events
+    probabilities = bin_integrals / np.sum(bin_integrals)
+    n_per_bin = rng.multinomial(total_events, probabilities)
+
+    # Now randomly sample uniformly within each bin
+    logE_samples = []
+    for i in range(n_bins):
+        if n_per_bin[i] > 0:
+            logEs = rng.uniform(bin_edges[i], bin_edges[i + 1], n_per_bin[i])
+            logE_samples.append(logEs)
+
+    logE_samples = np.concatenate(logE_samples)
+    return logE_samples, bin_edges, bin_centers

@@ -21,8 +21,7 @@ def get_event_counts_per_bin(data, bin_edges):
 def apply_cuts(data, use_border, use_geom, which_cuts="zane"):
     cut_sets = {
         "matt": [5, 50, 50, 0, 55, 145],
-        "zane": [3.5, 25, 20, 400, 55, 145],
-    }
+        "zane": [3.5, 25, 20, 400, 55, 145]}
     if which_cuts not in cut_sets:
         raise ValueError(f"Unknown cuts: {which_cuts}")
     c = cut_sets[which_cuts]
@@ -66,8 +65,33 @@ def reweight_true_energy(true_energy):
     return ak.from_numpy(w)
 
 
-def compute_flux(data_counts, mc, weights):
-    mc_thrown_counts, _ = np.histogram(mc.LogEnergy_true, bins=BIN_EDGES, weights=weights)
+# def compute_flux(data_counts, mc, mc_full, weights, weights_full):
+#     mc_thrown_counts, _ = np.histogram(mc_full.LogEnergy_true, bins=BIN_EDGES, weights=weights_full)
+#     mc_reco_counts = get_event_counts_per_bin(mc, BIN_EDGES)
+#
+#     efficiency = mc_reco_counts / mc_thrown_counts
+#     aperture_shape = efficiency * A_GEOM
+#     dE = np.log(10) * (10 ** BIN_CENTERS) * BIN_WIDTHS
+#     exposure_shape = aperture_shape * ONTIME_SECONDS * dE
+#     flux_shape = data_counts / exposure_shape
+#
+#     flux_err_lower, flux_err_upper = feldman_cousins_flux_errors(data_counts, exposure_shape, ONTIME_SECONDS, use_correction=False)
+#
+#     return flux_shape, flux_err_lower, flux_err_upper, exposure_shape
+
+
+def compute_flux(data_counts, mc, mc_full, weights, weights_full, logE_thrown_override=None):
+    """
+    Compute the flux shape using reconstructed MC, full MC, and precomputed weights.
+    Optionally override the 'thrown' log-energy with a synthetic distribution.
+    """
+    if logE_thrown_override is not None:
+        logE_thrown = logE_thrown_override
+        logger.info("Using synthetic log10(E) thrown distribution.")
+    else:
+        logE_thrown = mc_full.LogEnergy_true
+
+    mc_thrown_counts, _ = np.histogram(logE_thrown, bins=BIN_EDGES, weights=weights_full)
     mc_reco_counts = get_event_counts_per_bin(mc, BIN_EDGES)
 
     efficiency = mc_reco_counts / mc_thrown_counts
@@ -76,7 +100,8 @@ def compute_flux(data_counts, mc, weights):
     exposure_shape = aperture_shape * ONTIME_SECONDS * dE
     flux_shape = data_counts / exposure_shape
 
-    flux_err_lower, flux_err_upper = feldman_cousins_flux_errors(data_counts, exposure_shape, ONTIME_SECONDS, use_correction=False)
+    flux_err_lower, flux_err_upper = feldman_cousins_flux_errors(
+        data_counts, exposure_shape, ONTIME_SECONDS, use_correction=False)
 
     return flux_shape, flux_err_lower, flux_err_upper, exposure_shape
 
@@ -85,9 +110,12 @@ def normalize_flux(flux_shape, flux_err_lower, flux_err_upper):
     """Normalize flux to match TA spectrum at 19.25."""
     logger.info("Normalizing to TA 19.25 flux point...")
     ta_flux_1925 = 4.112E-34
+    ta_flux_1905 = 1.404E-33
     dt_flux_1925 = flux_shape[BIN_CENTERS == 19.25][0]
+    dt_flux_1905 = flux_shape[BIN_CENTERS == 19.05][0]
 
-    norm_factor = ta_flux_1925 / dt_flux_1925
+    # norm_factor = ta_flux_1925 / dt_flux_1925
+    norm_factor = ta_flux_1905 / dt_flux_1905
     flux_norm = flux_shape * norm_factor
     flux_err_lower_norm = flux_err_lower * norm_factor
     flux_err_upper_norm = flux_err_upper * norm_factor
